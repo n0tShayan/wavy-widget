@@ -1,0 +1,4 @@
+<resources>
+    <!-- Must match PANEL in tools/gen_wave.py and WidgetRenderer.PANEL. -->
+    <color name="panel">#FF101012</color>
+</resources>

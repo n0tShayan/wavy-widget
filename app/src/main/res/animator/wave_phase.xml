@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shifts the wave by exactly one wavelength, so the loop is seamless. -->
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:propertyName="translateX"
+    android:valueFrom="0"
+    android:valueTo="-28"
+    android:valueType="floatType"
+    android:duration="1100"
+    android:repeatCount="infinite"
+    android:repeatMode="restart"
+    android:interpolator="@android:anim/linear_interpolator" />

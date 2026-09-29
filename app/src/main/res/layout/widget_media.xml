@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RemoteViews layout: only framework widget classes allowed (no Space/View/custom views). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Album art with the track info overlaid, One UI 9 style. -->
+    <FrameLayout
+        android:id="@+id/art_area"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ImageView
+            android:id="@+id/bg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY" />
+
+        <ImageView
+            android:id="@+id/app_icon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="14dp"
+            android:importantForAccessibility="no" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="vertical"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="2dp">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#FFFFFFFF"
+                android:shadowColor="#80000000"
+                android:shadowRadius="8"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#B3FFFFFF"
+                android:shadowColor="#80000000"
+                android:shadowRadius="8"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Fixed-colour panel: the wave mask relies on this exact colour. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="92dp"
+        android:background="@drawable/panel_bg"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="wrap_content">
+
+                <!-- Ticks inside the launcher itself while playing: no app wake-ups. -->
+                <Chronometer
+                    android:id="@+id/elapsed_live"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/elapsed_static"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="11sp" />
+            </FrameLayout>
+
+            <!-- Seek bar, bottom to top: colour fill, animated wave mask (or flat mask when
+                 paused), then a cover that hides the unplayed part. -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1">
+
+                <ImageView
+                    android:id="@+id/seek_fill"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitXY" />
+
+                <ProgressBar
+                    android:id="@+id/seek_wave"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="14dp"
+                    android:indeterminate="true"
+                    android:indeterminateDrawable="@drawable/seek_wave_anim"
+                    android:maxHeight="14dp"
+                    android:minHeight="14dp" />
+
+                <ImageView
+                    android:id="@+id/seek_flat"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitXY"
+                    android:src="@drawable/seek_flat_mask"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/seek_cover"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitXY"
+                    android:src="@drawable/seek_cover" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/duration"
+                android:layout_width="38dp"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textColor="#99FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:id="@+id/btn_prev"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/circle_soft"
+                android:contentDescription="Previous"
+                android:foreground="@drawable/ripple_circle">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_prev" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/btn_play"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_marginStart="22dp"
+                android:layout_marginEnd="22dp"
+                android:contentDescription="Play or pause"
+                android:foreground="@drawable/ripple_circle">
+
+                <!-- Tinted with the album colour via setColorFilter. -->
+                <ImageView
+                    android:id="@+id/play_bg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/circle_solid" />
+
+                <ImageView
+                    android:id="@+id/play_icon"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_play" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/btn_next"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/circle_soft"
+                android:contentDescription="Next"
+                android:foreground="@drawable/ripple_circle">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_next" />
+            </FrameLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

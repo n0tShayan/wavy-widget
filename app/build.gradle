@@ -1,0 +1,34 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "dev.mediawidget"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "dev.mediawidget"
+        minSdk 29
+        //noinspection ExpiredTargetSdkVersion - built for a One UI 3.1 / Android 11 device
+        targetSdk 30
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")
+            // Sideloaded personal build: sign with the local debug key.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint { checkReleaseBuilds false }
+}

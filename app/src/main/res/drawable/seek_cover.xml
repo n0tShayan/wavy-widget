@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hides the not-yet-played part of the wave. Level = 10000 - progress. -->
+<clip xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/seek_cover_vec"
+    android:clipOrientation="horizontal"
+    android:gravity="right" />

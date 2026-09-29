@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Media Widget</string>
+    <string name="widget_name">Now playing</string>
+    <string name="not_playing">Not playing</string>
+    <string name="tap_to_open">Tap to open Spotify</string>
+    <string name="setup_title">Finish setup</string>
+    <string name="setup_sub">Tap to allow notification access</string>
+</resources>
