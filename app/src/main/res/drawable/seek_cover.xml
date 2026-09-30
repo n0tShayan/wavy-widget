@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Hides the not-yet-played part of the wave. Level = 10000 - progress. -->
-<clip xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/seek_cover_vec"
-    android:clipOrientation="horizontal"
-    android:gravity="right" />
+<!-- Hides the not-yet-played wave. Level = 10000 - progress, so the scaled layer's left
+     edge is the progress head (inset 2dp so the handle never clips at either end).
+     Draws the unplayed track: a gap for the handle, a rounded line and an end dot. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="2dp" android:insetRight="2dp">
+    <scale android:scaleGravity="right" android:scaleWidth="100%">
+        <layer-list>
+            <item android:left="-5dp" android:right="-2dp">
+                <shape><solid android:color="@color/panel" /></shape>
+            </item>
+            <item android:left="5dp" android:height="3.5dp" android:gravity="center_vertical|fill_horizontal">
+                <shape><solid android:color="#2EFFFFFF" /><corners android:radius="1.75dp" /></shape>
+            </item>
+            <item android:right="-1.75dp" android:width="3.5dp" android:height="3.5dp"
+                android:gravity="right|center_vertical">
+                <shape android:shape="oval"><solid android:color="#80FFFFFF" /></shape>
+            </item>
+        </layer-list>
+    </scale>
+</inset>

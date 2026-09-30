@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Buttons dip on press and spring back on release. Runs in the launcher, only on touch. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="0.88" android:valueType="floatType"
+                android:duration="120" android:interpolator="@android:interpolator/fast_out_slow_in" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="0.88" android:valueType="floatType"
+                android:duration="120" android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </set>
+    </item>
+    <item>
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="1" android:valueType="floatType"
+                android:duration="380" android:interpolator="@android:anim/overshoot_interpolator" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="1" android:valueType="floatType"
+                android:duration="380" android:interpolator="@android:anim/overshoot_interpolator" />
+        </set>
+    </item>
+</selector>

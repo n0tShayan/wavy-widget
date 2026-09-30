@@ -16,7 +16,9 @@ final class WidgetRenderer {
     static final int PANEL = 0xFF101012;
     static final float PANEL_DP = 92f;
     static final float RADIUS_DP = 26f;
-    private static final int MAX_BG_WIDTH = 900;
+    /** Art is kept at 480 px, so a wider background adds memory (here, the launcher's and
+     *  system_server's copies) but no detail; the launcher scales it up. */
+    private static final int MAX_BG_WIDTH = 720;
 
     private WidgetRenderer() {}
 

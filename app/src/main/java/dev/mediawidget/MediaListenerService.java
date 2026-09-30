@@ -10,7 +10,8 @@ import android.service.notification.NotificationListenerService;
 public class MediaListenerService extends NotificationListenerService {
     @Override
     public void onListenerConnected() {
-        WidgetController.get(this).ensureStarted();
+        // Also covers access being re-granted: refresh the widget from the setup state.
+        WidgetController.get(this).onWidgetsChanged();
     }
 
     @Override

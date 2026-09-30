@@ -17,19 +17,33 @@ seek bar takes its colours from the cover. Previous, play/pause and next are cir
 
 | Part | Who does the work | Cost to this app |
 | --- | --- | --- |
-| Wave animation | Launcher's RenderThread (AnimatedVectorDrawable) | Zero; stops when home isn't visible |
+| Wave animation, grow on play, coast and flatten on pause | Launcher's RenderThread (AnimatedVectorDrawable) | Zero; stops when home isn't visible |
+| Play / pause icon morph | Launcher's RenderThread (AnimatedVectorDrawable) | Zero, plus one tiny update to swap in the static icon afterwards |
+| Art, title and colour crossfade on track change | Launcher (`animateLayoutChanges`) | Zero, plus one tiny update to free the old art afterwards |
+| Button press dip and spring | Launcher (`stateListAnimator`) | Zero; runs only on touch |
 | Elapsed time | Launcher's `Chronometer` | Zero |
-| Progress bar | One ~100-byte partial update per second | Only while playing, screen on and unlocked |
+| Progress bar and handle | One ~100-byte partial update, at most once a second and only when it moves a pixel | Only while playing, screen on and unlocked |
 | Album colours and background | Rendered once per track | A few ms per song |
-| Track, play and pause changes | MediaSession callbacks | Event driven, no polling |
+| Track, play and pause changes | MediaSession callbacks, cached | Event driven, no polling, no repeat bitmap transfers |
 
 There's no foreground service, no wakelock, no alarms and no network access. The process is
 kept alive by the system's own notification-listener binding.
 
+Metadata and playback state are cached from the session callbacks. Reading them back from
+the player is a binder call, and the metadata carries the full album bitmap. Repeated
+metadata callbacks that change nothing on screen don't re-send any bitmaps.
+
 Android 11 widgets can't tint an animated progress bar. So the wave is a panel-coloured
 *mask* with a sine-shaped hole, animated by the launcher, sitting on an album-coloured
-gradient. A clip drawable covers the unplayed part. That's why the control panel has a fixed
-dark colour (`#101012`).
+gradient. A level-scaled cover hides the unplayed part. Its left edge is the progress head,
+so it also draws the gap, the rounded track and the end dot. A handle on the same level,
+tinted with the gradient colour at that point, sits on top. That's why the control panel
+has a fixed dark colour (`#101012`).
+
+Animations that RemoteViews can't trigger directly are started by visibility. An
+indeterminate `ProgressBar` starts its AnimatedVectorDrawable when it becomes visible. A
+parent with `animateLayoutChanges` fades its children in and out, so the art, text and
+colours each have an `a` and a `b` copy and the app flips which one is visible.
 
 ## Build
 
@@ -40,5 +54,7 @@ gradlew assembleRelease
 
 The APK is at `app/build/outputs/apk/release/app-release.apk`.
 
-To change the wave shape (wavelength, amplitude, thickness), edit `tools/gen_wave.py`, run
-it, and keep `valueTo` in `res/animator/wave_phase.xml` equal to `-WAVELEN`.
+To change the wave (wavelength, amplitude, thickness, speed, grow and shrink timing) or the
+play / pause shapes, edit `tools/gen_wave.py` and run it. Keep `SETTLE_MS` in
+`WidgetController` longer than its longest animation. Static drawables, styles and the
+seek bar cover and handle come from `tools/write_icons.py`.

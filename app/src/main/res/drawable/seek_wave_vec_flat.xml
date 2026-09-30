@@ -3,5 +3,8 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="280dp" android:height="16dp"
     android:viewportWidth="280" android:viewportHeight="16">
-    <path android:fillColor="#FF101012" android:fillType="evenOdd" android:pathData="@string/path_flat" />
+    <group android:name="phase">
+        <path android:name="band" android:fillColor="#FF101012" android:fillType="evenOdd"
+            android:pathData="@string/path_flat" />
+    </group>
 </vector>

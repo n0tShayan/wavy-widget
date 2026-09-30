@@ -6,8 +6,6 @@ X = '<?xml version="1.0" encoding="utf-8"?>\n'
 A = 'xmlns:android="http://schemas.android.com/apk/res/android"'
 
 ICONS = {
-    "ic_play": ("#FF101012", "M8,6.82v10.36c0,0.79 0.87,1.27 1.54,0.84l8.14,-5.18c0.62,-0.39 0.62,-1.29 0,-1.69L9.54,5.98C8.87,5.55 8,6.03 8,6.82z"),
-    "ic_pause": ("#FF101012", "M8,19c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2v10c0,1.1 0.9,2 2,2zM14,7v10c0,1.1 0.9,2 2,2s2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2s-2,0.9 -2,2z"),
     "ic_next": ("#FFFFFFFF", "M7.58,16.89l5.77,-4.07c0.56,-0.4 0.56,-1.24 0,-1.63L7.58,7.11C6.91,6.65 6,7.12 6,7.93v8.14c0,0.81 0.91,1.28 1.58,0.82zM16,7v10c0,0.55 0.45,1 1,1s1,-0.45 1,-1V7c0,-0.55 -0.45,-1 -1,-1s-1,0.45 -1,1z"),
     "ic_prev": ("#FFFFFFFF", "M7,6c0.55,0 1,0.45 1,1v10c0,0.55 -0.45,1 -1,1s-1,-0.45 -1,-1V7c0,-0.55 0.45,-1 1,-1zM10.66,12.82l5.77,4.07c0.66,0.47 1.58,-0.01 1.58,-0.82V7.93c0,-0.81 -0.91,-1.28 -1.58,-0.82l-5.77,4.07c-0.57,0.4 -0.57,1.24 0,1.64z"),
 }
@@ -27,6 +25,53 @@ FILES = {
     <color name="panel">#FF101012</color>
 </resources>
 """,
+    "values/styles.xml": """<resources>
+    <style name="WidgetTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:shadowColor">#80000000</item>
+        <item name="android:shadowRadius">8</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="WidgetArtist" parent="WidgetTitle">
+        <item name="android:layout_marginTop">1dp</item>
+        <item name="android:textColor">#B3FFFFFF</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+
+    <style name="WidgetTime">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#99FFFFFF</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <!-- Horizontal style: stretches the drawable to the view (no aspect fit) and brings no tint. -->
+    <style name="WidgetWave" parent="@android:style/Widget.ProgressBar.Horizontal">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">16dp</item>
+        <item name="android:minHeight">16dp</item>
+        <item name="android:maxHeight">16dp</item>
+        <item name="android:indeterminate">true</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="WidgetMorph" parent="WidgetWave">
+        <item name="android:layout_width">28dp</item>
+        <item name="android:layout_height">28dp</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:minHeight">28dp</item>
+        <item name="android:maxHeight">28dp</item>
+        <item name="android:visibility">gone</item>
+    </style>
+</resources>
+""",
     "xml/media_widget_info.xml": X + """<appwidget-provider %s
     android:minWidth="250dp"
     android:minHeight="180dp"
@@ -38,27 +83,64 @@ FILES = {
     android:previewImage="@drawable/widget_preview"
     android:widgetCategory="home_screen" />
 """ % A,
-    "animator/wave_phase.xml": X + """<!-- Shifts the wave by exactly one wavelength, so the loop is seamless. -->
-<objectAnimator %s
-    android:propertyName="translateX"
-    android:valueFrom="0"
-    android:valueTo="-28"
-    android:valueType="floatType"
-    android:duration="1100"
-    android:repeatCount="infinite"
-    android:repeatMode="restart"
-    android:interpolator="@android:anim/linear_interpolator" />
+    "drawable/seek_cover.xml": X + """<!-- Hides the not-yet-played wave. Level = 10000 - progress, so the scaled layer's left
+     edge is the progress head (inset 2dp so the handle never clips at either end).
+     Draws the unplayed track: a gap for the handle, a rounded line and an end dot. -->
+<inset %s
+    android:insetLeft="2dp" android:insetRight="2dp">
+    <scale android:scaleGravity="right" android:scaleWidth="100%%">
+        <layer-list>
+            <item android:left="-5dp" android:right="-2dp">
+                <shape><solid android:color="@color/panel" /></shape>
+            </item>
+            <item android:left="5dp" android:height="3.5dp" android:gravity="center_vertical|fill_horizontal">
+                <shape><solid android:color="#2EFFFFFF" /><corners android:radius="1.75dp" /></shape>
+            </item>
+            <item android:right="-1.75dp" android:width="3.5dp" android:height="3.5dp"
+                android:gravity="right|center_vertical">
+                <shape android:shape="oval"><solid android:color="#80FFFFFF" /></shape>
+            </item>
+        </layer-list>
+    </scale>
+</inset>
 """ % A,
-    "drawable/seek_wave_anim.xml": X + """<animated-vector %s
-    android:drawable="@drawable/seek_wave_mask">
-    <target android:name="phase" android:animation="@animator/wave_phase" />
-</animated-vector>
+    "drawable/seek_thumb.xml": X + """<!-- Progress handle, positioned like seek_cover and tinted with the album colour. -->
+<inset %s
+    android:insetLeft="2dp" android:insetRight="2dp">
+    <scale android:scaleGravity="right" android:scaleWidth="100%%">
+        <layer-list>
+            <item android:left="-2dp" android:width="4dp" android:height="16dp"
+                android:gravity="left|center_vertical">
+                <shape><solid android:color="#FFFFFFFF" /><corners android:radius="2dp" /></shape>
+            </item>
+        </layer-list>
+    </scale>
+</inset>
 """ % A,
-    "drawable/seek_cover.xml": X + """<!-- Hides the not-yet-played part of the wave. Level = 10000 - progress. -->
-<clip %s
-    android:drawable="@drawable/seek_cover_vec"
-    android:clipOrientation="horizontal"
-    android:gravity="right" />
+    "drawable/seek_fade.xml": X + """<!-- Softens the wave's start so it emerges from the panel instead of being cut. -->
+<shape %s>
+    <gradient android:angle="0" android:startColor="@color/panel" android:endColor="#00101012" />
+</shape>
+""" % A,
+    "animator/press_scale.xml": X + """<!-- Buttons dip on press and spring back on release. Runs in the launcher, only on touch. -->
+<selector %s>
+    <item android:state_pressed="true">
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="0.88" android:valueType="floatType"
+                android:duration="120" android:interpolator="@android:interpolator/fast_out_slow_in" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="0.88" android:valueType="floatType"
+                android:duration="120" android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </set>
+    </item>
+    <item>
+        <set>
+            <objectAnimator android:propertyName="scaleX" android:valueTo="1" android:valueType="floatType"
+                android:duration="380" android:interpolator="@android:anim/overshoot_interpolator" />
+            <objectAnimator android:propertyName="scaleY" android:valueTo="1" android:valueType="floatType"
+                android:duration="380" android:interpolator="@android:anim/overshoot_interpolator" />
+        </set>
+    </item>
+</selector>
 """ % A,
     "drawable/panel_bg.xml": X + """<shape %s>
     <solid android:color="@color/panel" />

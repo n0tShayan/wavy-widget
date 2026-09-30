@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Softens the wave's start so it emerges from the panel instead of being cut. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:angle="0" android:startColor="@color/panel" android:endColor="#00101012" />
+</shape>
