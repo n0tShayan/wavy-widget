@@ -20,6 +20,8 @@ seek bar takes its colours from the cover. Previous, play/pause and next are cir
 | Wave animation, grow on play, coast and flatten on pause | Launcher's RenderThread (AnimatedVectorDrawable) | Zero; stops when home isn't visible |
 | Play / pause icon morph | Launcher's RenderThread (AnimatedVectorDrawable) | Zero, plus one tiny update to swap in the static icon afterwards |
 | Art, title and colour crossfade on track change | Launcher (`animateLayoutChanges`) | Zero, plus one tiny update to free the old art afterwards |
+| Tap-to-seek on the wave line | 24 cached tap zones; one `seekTo` and one tiny update per tap | Only when tapped |
+| Like / unlike (heart, top right) | Player's own like action, read from the cached playback state; pop runs on the RenderThread | Only when tapped or when the like changes |
 | Button press dip and spring | Launcher (`stateListAnimator`) | Zero; runs only on touch |
 | Elapsed time | Launcher's `Chronometer` | Zero |
 | Progress bar and handle | One ~100-byte partial update, at most once a second and only when it moves a pixel | Only while playing, screen on and unlocked |
@@ -44,6 +46,11 @@ Animations that RemoteViews can't trigger directly are started by visibility. An
 indeterminate `ProgressBar` starts its AnimatedVectorDrawable when it becomes visible. A
 parent with `animateLayoutChanges` fades its children in and out, so the art, text and
 colours each have an `a` and a `b` copy and the app flips which one is visible.
+
+Home screen widgets only receive taps, never drags, so seeking is tap-to-seek: tap anywhere
+on the wave line to jump there. The heart appears when the playing app offers a like
+control (Spotify's "Liked Songs"). If it doesn't show, open the app: the setup screen lists
+the controls the player exposes.
 
 ## Build
 

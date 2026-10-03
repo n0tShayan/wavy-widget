@@ -18,11 +18,15 @@ FILES = {
     <string name="tap_to_open">Tap to open Spotify</string>
     <string name="setup_title">Finish setup</string>
     <string name="setup_sub">Tap to allow notification access</string>
+    <string name="like">Add to Liked Songs</string>
+    <string name="unlike">Remove from Liked Songs</string>
 </resources>
 """,
     "values/colors.xml": """<resources>
     <!-- Must match PANEL in tools/gen_wave.py and WidgetRenderer.PANEL. -->
     <color name="panel">#FF101012</color>
+    <!-- Liked Songs heart. -->
+    <color name="liked">#FF1ED760</color>
 </resources>
 """,
     "values/styles.xml": """<resources>
@@ -59,6 +63,14 @@ FILES = {
         <item name="android:minHeight">16dp</item>
         <item name="android:maxHeight">16dp</item>
         <item name="android:indeterminate">true</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <!-- One tap-to-seek zone; 24 of these split the seek bar evenly. -->
+    <style name="SeekZone">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
         <item name="android:importantForAccessibility">no</item>
     </style>
 
@@ -141,6 +153,59 @@ FILES = {
         </set>
     </item>
 </selector>
+""" % A,
+    "drawable/circle_dim.xml": X + """<shape %s android:shape="oval">
+    <solid android:color="#4D000000" />
+</shape>
+""" % A,
+    "drawable/ic_heart.xml": X + """<vector %s
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M16.5,3c-1.74,0 -3.41,0.81 -4.5,2.09C10.91,3.81 9.24,3 7.5,3 4.42,3 2,5.42 2,8.5c0,3.78 3.4,6.86 8.55,11.54L12,21.35l1.45,-1.32C18.6,15.36 22,12.28 22,8.5 22,5.42 19.58,3 16.5,3zM12.1,18.55l-0.1,0.1 -0.1,-0.1C7.14,14.24 4,11.39 4,8.5 4,6.5 5.5,5 7.5,5c1.54,0 3.04,0.99 3.57,2.36h1.87C13.46,5.99 14.96,5 16.5,5c2,0 3.5,1.5 3.5,3.5 0,2.89 -3.14,5.74 -7.9,10.05z" />
+</vector>
+""" % A,
+    "drawable/ic_heart_filled.xml": X + """<vector %s
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="@color/liked" android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z" />
+</vector>
+""" % A,
+    "drawable/heart_pop_vec.xml": X + """<!-- 36 units across so the ring can burst past the 24-unit heart. -->
+<vector %s
+    android:width="36dp" android:height="36dp" android:viewportWidth="36" android:viewportHeight="36">
+    <group android:name="ring" android:pivotX="18" android:pivotY="18" android:scaleX="0.4" android:scaleY="0.4">
+        <path android:name="ring_path" android:strokeColor="@color/liked" android:strokeWidth="1.6"
+            android:strokeAlpha="0" android:pathData="M18,6 A12,12 0 1,1 17.99,6 Z" />
+    </group>
+    <group android:name="pop" android:pivotX="18" android:pivotY="18" android:scaleX="0" android:scaleY="0">
+        <group android:translateX="6" android:translateY="6">
+            <path android:fillColor="@color/liked" android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z" />
+        </group>
+    </group>
+</vector>
+""" % A,
+    "drawable/avd_heart_pop.xml": X + """<animated-vector %s android:drawable="@drawable/heart_pop_vec">
+    <target android:name="pop" android:animation="@animator/heart_pop" />
+    <target android:name="ring" android:animation="@animator/heart_ring" />
+    <target android:name="ring_path" android:animation="@animator/heart_ring_fade" />
+</animated-vector>
+""" % A,
+    "animator/heart_pop.xml": X + """<!-- Heart springs in past full size and settles. -->
+<set %s>
+    <objectAnimator android:propertyName="scaleX" android:valueFrom="0" android:valueTo="1" android:valueType="floatType"
+        android:duration="420" android:interpolator="@android:anim/overshoot_interpolator" />
+    <objectAnimator android:propertyName="scaleY" android:valueFrom="0" android:valueTo="1" android:valueType="floatType"
+        android:duration="420" android:interpolator="@android:anim/overshoot_interpolator" />
+</set>
+""" % A,
+    "animator/heart_ring.xml": X + """<set %s>
+    <objectAnimator android:propertyName="scaleX" android:valueFrom="0.4" android:valueTo="1.4" android:valueType="floatType"
+        android:duration="460" android:interpolator="@android:anim/decelerate_interpolator" />
+    <objectAnimator android:propertyName="scaleY" android:valueFrom="0.4" android:valueTo="1.4" android:valueType="floatType"
+        android:duration="460" android:interpolator="@android:anim/decelerate_interpolator" />
+</set>
+""" % A,
+    "animator/heart_ring_fade.xml": X + """<objectAnimator %s android:propertyName="strokeAlpha"
+    android:valueFrom="0.9" android:valueTo="0" android:valueType="floatType"
+    android:duration="460" android:interpolator="@android:anim/decelerate_interpolator" />
 """ % A,
     "drawable/panel_bg.xml": X + """<shape %s>
     <solid android:color="@color/panel" />

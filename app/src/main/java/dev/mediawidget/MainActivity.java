@@ -5,6 +5,9 @@ import android.app.NotificationManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -21,6 +24,7 @@ public class MainActivity extends Activity {
     private Button accessButton;
     private TextView batteryStatus;
     private Button batteryButton;
+    private TextView controls;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -57,6 +61,12 @@ public class MainActivity extends Activity {
         root.addView(button("Add to home screen", v -> AppWidgetManager.getInstance(this)
                 .requestPinAppWidget(new ComponentName(this, MediaWidgetProvider.class), null, null)));
 
+        root.addView(heading("Detected player controls"));
+        root.addView(text("What the playing app offers the widget. The heart shows when a like "
+                + "control is found. Start a song, then reopen this screen.", 14));
+        controls = text("", 13);
+        root.addView(controls);
+
         ScrollView scroll = new ScrollView(this);
         scroll.addView(root);
         setContentView(scroll);
@@ -74,7 +84,34 @@ public class MainActivity extends Activity {
         batteryStatus.setText(exempt ? "Done" : "Not set");
         batteryButton.setEnabled(!exempt);
 
+        controls.setText(access ? describeControls() : "Grant notification access first.");
+
         WidgetController.get(this).onWidgetsChanged();
+    }
+
+    /** One line per active player: seek support, like control, and its custom actions. */
+    private String describeControls() {
+        StringBuilder out = new StringBuilder();
+        try {
+            for (MediaController mc : getSystemService(MediaSessionManager.class).getActiveSessions(
+                    new ComponentName(this, MediaListenerService.class))) {
+                PlaybackState s = mc.getPlaybackState();
+                PlaybackState.CustomAction like = WidgetController.likeAction(s);
+                out.append(mc.getPackageName())
+                        .append("\n  seek: ").append(s != null && (s.getActions() & PlaybackState.ACTION_SEEK_TO) != 0 ? "yes" : "no")
+                        .append("\n  like: ").append(like != null ? like.getAction() : "not found")
+                        .append(", rating type ").append(mc.getRatingType());
+                if (s != null) {
+                    for (PlaybackState.CustomAction a : s.getCustomActions()) {
+                        out.append("\n  action: ").append(a.getAction()).append(" (").append(a.getName()).append(')');
+                    }
+                }
+                out.append("\n\n");
+            }
+        } catch (SecurityException e) {
+            return "Grant notification access first.";
+        }
+        return out.length() > 0 ? out.toString().trim() : "No active players. Start a song and reopen.";
     }
 
     private TextView heading(String s) {

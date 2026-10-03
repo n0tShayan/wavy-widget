@@ -35,6 +35,14 @@
         <item name="android:importantForAccessibility">no</item>
     </style>
 
+    <!-- One tap-to-seek zone; 24 of these split the seek bar evenly. -->
+    <style name="SeekZone">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
     <style name="WidgetMorph" parent="WidgetWave">
         <item name="android:layout_width">28dp</item>
         <item name="android:layout_height">28dp</item>

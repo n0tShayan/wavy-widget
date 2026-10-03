@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/heart_pop_vec">
+    <target android:name="pop" android:animation="@animator/heart_pop" />
+    <target android:name="ring" android:animation="@animator/heart_ring" />
+    <target android:name="ring_path" android:animation="@animator/heart_ring_fade" />
+</animated-vector>

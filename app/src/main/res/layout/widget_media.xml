@@ -50,6 +50,46 @@
             android:layout_marginTop="14dp"
             android:importantForAccessibility="no" />
 
+        <!-- Add to / remove from Liked Songs. Only shown when the player offers it. The pop
+             (heart springs in with a ring burst) is an AnimatedVectorDrawable started by
+             visibility, like the play / pause morph. -->
+        <FrameLayout
+            android:id="@+id/btn_like"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="5dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="Like"
+            android:foreground="@drawable/ripple_circle"
+            android:stateListAnimator="@animator/press_scale"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/circle_dim" />
+
+            <ImageView
+                android:id="@+id/like_icon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_heart" />
+
+            <ProgressBar
+                android:id="@+id/like_pop"
+                style="@style/WidgetMorph"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:indeterminateDrawable="@drawable/avd_heart_pop"
+                android:maxHeight="30dp"
+                android:minHeight="30dp" />
+        </FrameLayout>
+
         <!-- Exactly one of text_a / text_b is visible: old text fades out, new fades in. -->
         <FrameLayout
             android:layout_width="match_parent"
@@ -104,8 +144,8 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="22dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="28dp"
+            android:layout_marginTop="3dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -125,77 +165,117 @@
 
             <!-- Seek bar, bottom to top: colour fill, wave mask (animated wave while playing,
                  its shrink for a moment on pause, a static flat mask once paused), a fade at
-                 the start, the cover that hides the unplayed part, then the handle. -->
+                 the start, the cover that hides the unplayed part, then the handle.
+                 The outer frame is taller than the bar so the tap zones are easy to hit. -->
             <FrameLayout
                 android:layout_width="0dp"
-                android:layout_height="16dp"
+                android:layout_height="match_parent"
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1">
 
                 <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:animateLayoutChanges="true">
+                    android:layout_height="16dp"
+                    android:layout_gravity="center_vertical">
 
-                    <ImageView
-                        android:id="@+id/fill_a"
+                    <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:importantForAccessibility="no"
-                        android:scaleType="fitXY" />
+                        android:animateLayoutChanges="true">
+
+                        <ImageView
+                            android:id="@+id/fill_a"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:scaleType="fitXY" />
+
+                        <ImageView
+                            android:id="@+id/fill_b"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:scaleType="fitXY"
+                            android:visibility="gone" />
+                    </FrameLayout>
+
+                    <ProgressBar
+                        android:id="@+id/seek_wave"
+                        style="@style/WidgetWave"
+                        android:indeterminateDrawable="@drawable/seek_wave_grow"
+                        android:visibility="gone" />
+
+                    <ProgressBar
+                        android:id="@+id/seek_shrink"
+                        style="@style/WidgetWave"
+                        android:indeterminateDrawable="@drawable/seek_wave_shrink"
+                        android:visibility="gone" />
 
                     <ImageView
-                        android:id="@+id/fill_b"
+                        android:id="@+id/seek_flat"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:importantForAccessibility="no"
                         android:scaleType="fitXY"
-                        android:visibility="gone" />
+                        android:src="@drawable/seek_flat_mask" />
+
+                    <ImageView
+                        android:layout_width="10dp"
+                        android:layout_height="match_parent"
+                        android:importantForAccessibility="no"
+                        android:scaleType="fitXY"
+                        android:src="@drawable/seek_fade" />
+
+                    <ImageView
+                        android:id="@+id/seek_cover"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:importantForAccessibility="no"
+                        android:scaleType="fitXY"
+                        android:src="@drawable/seek_cover" />
+
+                    <ImageView
+                        android:id="@+id/seek_thumb"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:importantForAccessibility="no"
+                        android:scaleType="fitXY"
+                        android:src="@drawable/seek_thumb" />
                 </FrameLayout>
 
-                <ProgressBar
-                    android:id="@+id/seek_wave"
-                    style="@style/WidgetWave"
-                    android:indeterminateDrawable="@drawable/seek_wave_grow"
-                    android:visibility="gone" />
-
-                <ProgressBar
-                    android:id="@+id/seek_shrink"
-                    style="@style/WidgetWave"
-                    android:indeterminateDrawable="@drawable/seek_wave_shrink"
-                    android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/seek_flat"
+                <!-- Tap-to-seek: widgets only get taps (no drag), so the bar is split into
+                     equal zones, each a cached PendingIntent seeking to that point. -->
+                <LinearLayout
+                    android:id="@+id/seek_zones"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:importantForAccessibility="no"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/seek_flat_mask" />
-
-                <ImageView
-                    android:layout_width="10dp"
-                    android:layout_height="match_parent"
-                    android:importantForAccessibility="no"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/seek_fade" />
-
-                <ImageView
-                    android:id="@+id/seek_cover"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:importantForAccessibility="no"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/seek_cover" />
-
-                <ImageView
-                    android:id="@+id/seek_thumb"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:importantForAccessibility="no"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/seek_thumb" />
+                    android:orientation="horizontal">
+                    <FrameLayout android:id="@+id/seek_00" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_01" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_02" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_03" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_04" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_05" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_06" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_07" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_08" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_09" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_10" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_11" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_12" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_13" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_14" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_15" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_16" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_17" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_18" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_19" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_20" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_21" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_22" style="@style/SeekZone" />
+                    <FrameLayout android:id="@+id/seek_23" style="@style/SeekZone" />
+                </LinearLayout>
             </FrameLayout>
 
             <TextView

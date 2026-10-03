@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaMetadata;
+import android.media.Rating;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
@@ -30,6 +31,7 @@ import android.widget.RemoteViews;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -43,6 +45,24 @@ final class WidgetController {
     static final String ACTION_PLAY_PAUSE = "dev.mediawidget.PLAY_PAUSE";
     static final String ACTION_NEXT = "dev.mediawidget.NEXT";
     static final String ACTION_PREV = "dev.mediawidget.PREV";
+    static final String ACTION_SEEK = "dev.mediawidget.SEEK";
+    static final String ACTION_LIKE = "dev.mediawidget.LIKE";
+    static final String EXTRA_ZONE = "zone";
+
+    /** Tap-to-seek zones over the seek bar (widget_media.xml), left to right. */
+    private static final int[] ZONES = {
+            R.id.seek_00, R.id.seek_01, R.id.seek_02, R.id.seek_03, R.id.seek_04, R.id.seek_05,
+            R.id.seek_06, R.id.seek_07, R.id.seek_08, R.id.seek_09, R.id.seek_10, R.id.seek_11,
+            R.id.seek_12, R.id.seek_13, R.id.seek_14, R.id.seek_15, R.id.seek_16, R.id.seek_17,
+            R.id.seek_18, R.id.seek_19, R.id.seek_20, R.id.seek_21, R.id.seek_22, R.id.seek_23};
+
+    private static final int LIKE_NONE = 0; // player has no like control: button hidden
+    private static final int LIKE_OFF = 1;
+    private static final int LIKE_ON = 2;
+    /** Heart pop (heart_pop + ring, 460 ms) plus margin. */
+    private static final long LIKE_POP_MS = 560;
+    /** How long a tapped like waits for the player to confirm before re-reading its state. */
+    private static final long LIKE_HOLD_MS = 2000;
 
     private static final String SPOTIFY = "com.spotify.music";
     private static final int MAX_LEVEL = 10000;
@@ -110,6 +130,13 @@ final class WidgetController {
     private int textLayer;
     private String shownTitle;
     private String shownArtist;
+    private int shownLike = LIKE_NONE;
+    private long likePopUntil;  // uptimeMillis; the pop shows instead of the static heart
+    private long likeHoldUntil; // uptimeMillis; a tapped like is in flight
+
+    // Click intents never change, so they are built once (each is an IPC to create).
+    private PendingIntent playIntent, nextIntent, prevIntent, likeIntent;
+    private final PendingIntent[] seekIntents = new PendingIntent[ZONES.length];
 
     private final Runnable fullUpdate = this::fullUpdate;
     private final Runnable tick = this::tick;
@@ -126,6 +153,17 @@ final class WidgetController {
         RemoteViews rv = views();
         showPlayState(rv, shownPlaying, false);
         partial(rv);
+    };
+    private final Runnable settleLike = () -> {
+        likePopUntil = 0;
+        if (ids.length == 0) return;
+        RemoteViews rv = views();
+        applyLike(rv, shownLike);
+        partial(rv);
+    };
+    private final Runnable likeVerify = () -> {
+        likeHoldUntil = 0;
+        refreshLike();
     };
     /** Drops the covered art layer from the launcher's memory once the crossfade is done. */
     private final Runnable release = () -> {
@@ -182,7 +220,7 @@ final class WidgetController {
         scheduleFull(0, true);
     }
 
-    void handleAction(String action) {
+    void handleAction(String action, int zone) {
         handler.post(() -> {
             Tracked t = current;
             if (t == null) {
@@ -195,12 +233,28 @@ final class WidgetController {
                 am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, key));
                 return;
             }
-            handler.removeCallbacks(pausedLater);
             MediaController.TransportControls tc = t.mc.getTransportControls();
+            if (ACTION_LIKE.equals(action)) {
+                toggleLike(t, tc);
+                return;
+            }
+            handler.removeCallbacks(pausedLater);
             if (ACTION_NEXT.equals(action)) {
                 tc.skipToNext();
             } else if (ACTION_PREV.equals(action)) {
                 tc.skipToPrevious();
+            } else if (ACTION_SEEK.equals(action)) {
+                if (trackDur <= 0 || zone < 0 || zone >= ZONES.length) return;
+                // Zone centre, except the first zone which means "from the start".
+                long pos = zone == 0 ? 0 : (2L * zone + 1) * trackDur / (2L * ZONES.length);
+                tc.seekTo(pos);
+                // Move the handle and time now; verify() snaps back if the player ignored it.
+                RemoteViews rv = views();
+                applyState(rv, shownPlaying, shownRunning, pos, trackDur);
+                partial(rv);
+                scheduleTick();
+                handler.removeCallbacks(verify);
+                handler.postDelayed(verify, 1500);
             } else {
                 boolean play = !isPlaying(t.st);
                 if (play) tc.play(); else tc.pause();
@@ -214,6 +268,46 @@ final class WidgetController {
                 handler.postDelayed(verify, 1500);
             }
         });
+    }
+
+    /**
+     * Likes or unlikes the current track. The heart flips (and pops) at once; the player's
+     * next state confirms it, or after LIKE_HOLD_MS its real state is shown again.
+     */
+    private void toggleLike(Tracked t, MediaController.TransportControls tc) {
+        if (SystemClock.uptimeMillis() < likeHoldUntil) return; // one in flight: no double send
+        int state = likeState(t);
+        if (state == LIKE_NONE) return;
+        PlaybackState.CustomAction a = likeAction(t.st);
+        if (a != null) {
+            tc.sendCustomAction(a.getAction(), a.getExtras());
+        } else {
+            tc.setRating(Rating.newHeartRating(state != LIKE_ON));
+        }
+        RemoteViews rv = views();
+        applyLike(rv, state == LIKE_ON ? LIKE_OFF : LIKE_ON);
+        partial(rv);
+        likeHoldUntil = SystemClock.uptimeMillis() + LIKE_HOLD_MS;
+        handler.removeCallbacks(likeVerify);
+        handler.postDelayed(likeVerify, LIKE_HOLD_MS);
+    }
+
+    /** Shows the player's like state if it differs from the widget's (e.g. liked in Spotify). */
+    private void refreshLike() {
+        if (current == null || ids.length == 0) return;
+        int state = likeState(current);
+        if (SystemClock.uptimeMillis() < likeHoldUntil) {
+            if (state == shownLike) { // the player confirmed the tap
+                likeHoldUntil = 0;
+                handler.removeCallbacks(likeVerify);
+            }
+            return;
+        }
+        if (state != shownLike) {
+            RemoteViews rv = views();
+            applyLike(rv, state);
+            partial(rv);
+        }
     }
 
     // ---------------------------------------------------------------- sessions
@@ -281,6 +375,7 @@ final class WidgetController {
      */
     private final class Tracked extends MediaController.Callback {
         final MediaController mc;
+        final int ratingType;
         MediaMetadata md;
         PlaybackState st;
 
@@ -288,6 +383,7 @@ final class WidgetController {
             this.mc = mc;
             md = mc.getMetadata();
             st = mc.getPlaybackState();
+            ratingType = mc.getRatingType();
         }
 
         @Override
@@ -295,7 +391,10 @@ final class WidgetController {
             st = state;
             Tracked before = current;
             reselect(false);
-            if (this == current && before == current) onCurrentState();
+            if (this == current && before == current) {
+                onCurrentState();
+                refreshLike(); // Spotify's like action flips with its state
+            }
         }
 
         @Override
@@ -360,7 +459,10 @@ final class WidgetController {
         String k = key.toString();
         if (!force && k.equals(renderedKey)) {
             // A repeat of what's on screen (players re-send metadata often): no bitmaps.
-            if (t != null) onCurrentState();
+            if (t != null) {
+                onCurrentState();
+                refreshLike(); // heart-rating players report the like in metadata
+            }
             return;
         }
         renderedKey = k;
@@ -371,9 +473,12 @@ final class WidgetController {
             handler.postDelayed(release, RELEASE_MS);
         }
         renderedArtSig = artSig;
-        if (shownTitle != null && (!title.equals(shownTitle) || !artist.equals(shownArtist))) {
-            textLayer ^= 1;
-        }
+        boolean sameTrack = title.equals(shownTitle) && artist.equals(shownArtist);
+        if (shownTitle != null && !sameTrack) textLayer ^= 1;
+        // Keep showing a just-tapped like until the player confirms it, unless the track moved on.
+        if (!sameTrack) likeHoldUntil = 0;
+        int like = t == null ? LIKE_NONE
+                : SystemClock.uptimeMillis() < likeHoldUntil ? shownLike : likeState(t);
         shownTitle = title;
         shownArtist = artist;
 
@@ -384,6 +489,7 @@ final class WidgetController {
         PendingIntent open = access ? null : PendingIntent.getActivity(ctx, 0,
                 new Intent(ctx, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent content = access ? contentIntent(t) : open;
+        if (access) buildIntents();
 
         for (int i = 0; i < ids.length; i++) {
             RemoteViews rv = views();
@@ -417,10 +523,16 @@ final class WidgetController {
                 applyState(rv, false, false, 0, 0);
             }
 
+            applyLike(rv, like);
+
             rv.setOnClickPendingIntent(R.id.art_area, content);
-            rv.setOnClickPendingIntent(R.id.btn_play, access ? action(ACTION_PLAY_PAUSE, 1) : open);
-            rv.setOnClickPendingIntent(R.id.btn_next, access ? action(ACTION_NEXT, 2) : open);
-            rv.setOnClickPendingIntent(R.id.btn_prev, access ? action(ACTION_PREV, 3) : open);
+            rv.setOnClickPendingIntent(R.id.btn_play, access ? playIntent : open);
+            rv.setOnClickPendingIntent(R.id.btn_next, access ? nextIntent : open);
+            rv.setOnClickPendingIntent(R.id.btn_prev, access ? prevIntent : open);
+            rv.setOnClickPendingIntent(R.id.btn_like, access ? likeIntent : open);
+            for (int z = 0; z < ZONES.length; z++) {
+                rv.setOnClickPendingIntent(ZONES[z], access ? seekIntents[z] : open);
+            }
             awm.updateAppWidget(ids[i], rv);
         }
         scheduleTick();
@@ -475,6 +587,25 @@ final class WidgetController {
         rv.setViewVisibility(R.id.icon_to_play, !playing && moving ? View.VISIBLE : View.GONE);
         rv.setViewVisibility(R.id.play_icon, moving ? View.GONE : View.VISIBLE);
         rv.setImageViewResource(R.id.play_icon, playing ? R.drawable.ic_pause : R.drawable.ic_play);
+    }
+
+    /** Heart visibility and look; pops when it turns on while the home screen is visible. */
+    private void applyLike(RemoteViews rv, int state) {
+        long now = SystemClock.uptimeMillis();
+        if (shownLike == LIKE_OFF && state == LIKE_ON && homeVisible) {
+            likePopUntil = now + LIKE_POP_MS;
+            handler.removeCallbacks(settleLike);
+            handler.postDelayed(settleLike, LIKE_POP_MS);
+        } else if (state != LIKE_ON) {
+            likePopUntil = 0;
+        }
+        boolean popping = now < likePopUntil;
+        rv.setViewVisibility(R.id.btn_like, state == LIKE_NONE ? View.GONE : View.VISIBLE);
+        rv.setViewVisibility(R.id.like_pop, popping ? View.VISIBLE : View.GONE);
+        rv.setViewVisibility(R.id.like_icon, popping ? View.GONE : View.VISIBLE);
+        rv.setImageViewResource(R.id.like_icon, state == LIKE_ON ? R.drawable.ic_heart_filled : R.drawable.ic_heart);
+        rv.setContentDescription(R.id.btn_like, ctx.getString(state == LIKE_ON ? R.string.unlike : R.string.like));
+        shownLike = state;
     }
 
     /** Moves the cover and handle to {@code pos}; the handle takes the gradient's colour there. */
@@ -589,8 +720,17 @@ final class WidgetController {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private PendingIntent action(String action, int code) {
-        Intent i = new Intent(ctx, ActionReceiver.class).setAction(action);
+    private void buildIntents() {
+        if (playIntent != null) return;
+        playIntent = action(ACTION_PLAY_PAUSE, 1, 0);
+        nextIntent = action(ACTION_NEXT, 2, 0);
+        prevIntent = action(ACTION_PREV, 3, 0);
+        likeIntent = action(ACTION_LIKE, 4, 0);
+        for (int z = 0; z < ZONES.length; z++) seekIntents[z] = action(ACTION_SEEK, 100 + z, z);
+    }
+
+    private PendingIntent action(String action, int code, int zone) {
+        Intent i = new Intent(ctx, ActionReceiver.class).setAction(action).putExtra(EXTRA_ZONE, zone);
         return PendingIntent.getBroadcast(ctx, code, i,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
@@ -672,6 +812,45 @@ final class WidgetController {
         int g = Math.round(((a >> 8) & 0xFF) + (((b >> 8) & 0xFF) - ((a >> 8) & 0xFF)) * t);
         int bl = Math.round((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);
         return 0xFF000000 | (r << 16) | (g << 8) | bl;
+    }
+
+    /**
+     * The player's like control as a custom action, or null. Spotify exposes "add to / remove
+     * from Liked Songs" this way; ids and labels vary by player and version, so match loosely.
+     */
+    static PlaybackState.CustomAction likeAction(PlaybackState s) {
+        if (s == null) return null;
+        for (PlaybackState.CustomAction a : s.getCustomActions()) {
+            String id = describe(a);
+            if (id.contains("dislike") || id.contains("thumbs_down") || id.contains("thumb_down")) continue;
+            if (id.contains("like") || id.contains("heart") || id.contains("collection")
+                    || id.contains("favorite") || id.contains("favourite") || id.contains("love")
+                    || id.contains("save")) {
+                return a;
+            }
+        }
+        return null;
+    }
+
+    /** True when the like action undoes a like, i.e. the track is liked now. */
+    private static boolean undoesLike(PlaybackState.CustomAction a) {
+        String id = describe(a);
+        return id.contains("remove") || id.contains("unlike") || id.contains("unsave")
+                || id.contains("unfavo") || id.contains("unheart") || id.contains("delete");
+    }
+
+    static String describe(PlaybackState.CustomAction a) {
+        return (a.getAction() + " " + a.getName()).toLowerCase(Locale.ROOT);
+    }
+
+    private static int likeState(Tracked t) {
+        PlaybackState.CustomAction a = likeAction(t.st);
+        if (a != null) return undoesLike(a) ? LIKE_ON : LIKE_OFF;
+        if (t.ratingType == Rating.RATING_HEART) {
+            Rating r = t.md != null ? t.md.getRating(MediaMetadata.METADATA_KEY_USER_RATING) : null;
+            return r != null && r.hasHeart() ? LIKE_ON : LIKE_OFF;
+        }
+        return LIKE_NONE;
     }
 
     private static String time(long ms) {
